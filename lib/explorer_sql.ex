@@ -4,15 +4,11 @@ defmodule ExplorerSQL do
   """
 
   @doc """
-  Hello world.
+  Starts a new ExplorerSQL process.
 
-  ## Examples
-
-      iex> ExplorerSQL.hello()
-      :world
-
+  See `Postgrex.start_link/1` options.
   """
-  def hello do
-    :world
+  def start_link(opts) do
+    Postgrex.start_link(opts)
   end
 end
