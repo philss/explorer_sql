@@ -11,4 +11,15 @@ defmodule ExplorerSQL do
   def start_link(opts) do
     Postgrex.start_link(opts)
   end
+
+  def table(pid, name) do
+    # TODO: proper scape
+    case Postgrex.query(pid, "SELECT * FROM #{name} LIMIT 1", [], []) do
+      {:ok, %Postgrex.Result{rows: _}} ->
+        {:ok, %ExplorerSQL.DataFrame{pid: pid, table: name}}
+
+      {:error, _err} ->
+        {:error, :table_not_found}
+    end
+  end
 end
