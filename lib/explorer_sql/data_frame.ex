@@ -1,3 +1,3 @@
 defmodule ExplorerSQL.DataFrame do
-  defstruct [table: nil, pid: nil]
+  defstruct [table: nil, pid: nil, columns: [], dtypes: []]
 end

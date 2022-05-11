@@ -19,8 +19,13 @@ defmodule ExplorerSQLTest do
 
   describe "table/2" do
     test "returns an explorer_sql dataframe if table exists", %{pid: pid} do
-      assert {:ok, %ExplorerSQL.DataFrame{table: "links", pid: ^pid}} =
+      assert {:ok, %ExplorerSQL.DataFrame{} = df} =
                ExplorerSQL.table(pid, "links")
+
+      assert df.pid == pid
+      assert df.table == "links"
+      assert df.columns == ["id", "url", "clicks"]
+      assert df.dtypes == [:integer, :string, :integer]
     end
 
     test "returns an error when table does not exist", %{pid: pid} do

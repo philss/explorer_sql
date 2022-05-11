@@ -13,13 +13,6 @@ defmodule ExplorerSQL do
   end
 
   def table(pid, name) do
-    # TODO: proper scape
-    case Postgrex.query(pid, "SELECT * FROM #{name} LIMIT 1", [], []) do
-      {:ok, %Postgrex.Result{rows: _}} ->
-        {:ok, %ExplorerSQL.DataFrame{pid: pid, table: name}}
-
-      {:error, _err} ->
-        {:error, :table_not_found}
-    end
+    ExplorerSQL.Adapters.Postgres.table_description(pid, name)
   end
 end
