@@ -10,10 +10,8 @@ defmodule ExplorerSQL.Adapters.Postgres do
     case Postgrex.query(pid, sql_statement, [table_name], []) do
       {:ok, %Postgrex.Result{rows: [_ | _] = rows}} ->
         columns_with_dtypes = for [column, type] <- rows, do: {column, translate_dtype(type)}
-        {columns, dtypes} = Enum.unzip(columns_with_dtypes)
 
-        {:ok,
-         %ExplorerSQL.DataFrame{pid: pid, table: table_name, columns: columns, dtypes: dtypes}}
+        {:ok, Enum.unzip(columns_with_dtypes)}
 
       {:ok, %Postgrex.Result{rows: []}} ->
         {:error, :table_not_found}

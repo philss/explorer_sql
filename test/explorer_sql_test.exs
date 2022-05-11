@@ -19,7 +19,7 @@ defmodule ExplorerSQLTest do
 
   describe "table/2" do
     test "returns an explorer_sql dataframe if table exists", %{pid: pid} do
-      assert {:ok, %ExplorerSQL.DataFrame{} = df} =
+      assert %Explorer.DataFrame{data: %ExplorerSQL.DataFrame{} = df} =
                ExplorerSQL.table(pid, "links")
 
       assert df.pid == pid
@@ -35,7 +35,7 @@ defmodule ExplorerSQLTest do
 
   describe "to_sql/1" do
     test "returns a SQL statement selecting all data", %{pid: pid} do
-      {:ok, df} = ExplorerSQL.table(pid, "links")
+      df = ExplorerSQL.table(pid, "links")
       statement = ExplorerSQL.to_sql(df)
 
       assert statement == "SELECT * FROM links"
