@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-20.04
+
+    services:
+      pg:
+        image: postgres:${{ matrix.pg.version }}
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+        volumes:
+          - /var/run/postgresql:/var/run/postgresql
+
+    strategy:
+      fail-fast: false
+      matrix:
+        pg:
+          - version: 13
+        pair:
+          - elixir: 1.13.4
+            otp: 24.3.4
+        include:
+          - pg:
+              version: 14
+            pair:
+              elixir: 1.13.4
+              otp: 24.3.4
+            lint: lint
+    env:
+      MIX_ENV: test
+    steps:
+      - name: "Set PG settings"
+        run: |
+          docker exec ${{ job.services.pg.id }} sh -c 'echo "wal_level=logical" >> /var/lib/postgresql/data/postgresql.conf'
+          docker restart ${{ job.services.pg.id }}
+
+      - uses: actions/checkout@v2
+
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{matrix.pair.otp}}
+          elixir-version: ${{matrix.pair.elixir}}
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{matrix.pair.elixir}}-${{matrix.pair.otp}}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-
+
+      - run: mix deps.get
+
+      - run: mix format --check-formatted
+        if: ${{ matrix.lint }}
+
+      - run: mix deps.unlock --check-unused
+        if: ${{ matrix.lint }}
+
+      - run: mix deps.compile
+
+      - run: mix compile --warnings-as-errors
+        if: ${{ matrix.lint }}
+
+      - run: mix test
+        env:
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PG_SOCKET_DIR: /var/run/postgresql
