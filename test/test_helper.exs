@@ -51,7 +51,17 @@ defmodule PSQL do
 end
 
 PSQL.cmd(["-c", "DROP DATABASE IF EXISTS explorer_sql_test;"])
-PSQL.cmd(["-c", "CREATE DATABASE explorer_sql_test TEMPLATE=template0 ENCODING='UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8';"])
-PSQL.cmd(["-d", "explorer_sql_test", "-c", "CREATE TABLE links (id serial, url text, clicks int);"])
+
+PSQL.cmd([
+  "-c",
+  "CREATE DATABASE explorer_sql_test TEMPLATE=template0 ENCODING='UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8';"
+])
+
+PSQL.cmd([
+  "-d",
+  "explorer_sql_test",
+  "-c",
+  "CREATE TABLE links (id serial, url text, clicks int);"
+])
 
 ExUnit.start(assert_receive_timeout: 1_000)

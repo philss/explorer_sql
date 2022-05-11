@@ -27,7 +27,7 @@ defmodule ExplorerSQL.Adapters.Postgres do
   defp translate_dtype("text"), do: :string
   defp translate_dtype("varchar"), do: :string
 
-  def to_sql(%ExplorerSQL.DataFrame{} = df) do 
+  def to_sql(%ExplorerSQL.DataFrame{} = df) do
     "SELECT * FROM #{df.table}"
   end
 end

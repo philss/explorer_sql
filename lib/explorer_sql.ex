@@ -17,7 +17,7 @@ defmodule ExplorerSQL do
     Postgrex.start_link(opts)
   end
 
-  def table(pid, name) do 
+  def table(pid, name) do
     with {:ok, {columns, dtypes}} <- PG.table_description(pid, name) do
       sql_df = %SQLDF{pid: pid, table: name, columns: columns, dtypes: dtypes}
 
