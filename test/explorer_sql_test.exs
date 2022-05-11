@@ -1,5 +1,5 @@
 defmodule ExplorerSQLTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   doctest ExplorerSQL
 
   setup do
@@ -30,6 +30,15 @@ defmodule ExplorerSQLTest do
 
     test "returns an error when table does not exist", %{pid: pid} do
       assert {:error, :table_not_found} = ExplorerSQL.table(pid, "posts")
+    end
+  end
+
+  describe "to_sql/1" do
+    test "returns a SQL statement selecting all data", %{pid: pid} do
+      {:ok, df} = ExplorerSQL.table(pid, "links")
+      statement = ExplorerSQL.to_sql(df)
+
+      assert statement == "SELECT * FROM links"
     end
   end
 end
