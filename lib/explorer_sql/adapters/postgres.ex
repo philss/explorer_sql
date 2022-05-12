@@ -1,4 +1,6 @@
 defmodule ExplorerSQL.Adapters.Postgres do
+  @moduledoc false
+
   @spec table_description(pid(), String.t()) ::
           {:ok, {list(String.t()), list(atom())}}
           | {:error, :table_not_found | {:db_error, term()}}
