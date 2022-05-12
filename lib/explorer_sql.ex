@@ -4,7 +4,7 @@ defmodule ExplorerSQL do
   """
 
   alias ExplorerSQL.Adapters.Postgres, as: PG
-  alias ExplorerSQL.DataFrame, as: SQLDF
+  alias ExplorerSQL.Backend.DataFrame, as: SQLDF
 
   alias Explorer.DataFrame, as: DF
 
@@ -26,5 +26,4 @@ defmodule ExplorerSQL do
   end
 
   def to_sql(%DF{data: df}), do: PG.to_sql(df)
-  def to_sql(%SQLDF{} = df), do: PG.to_sql(df)
 end

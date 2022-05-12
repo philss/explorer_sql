@@ -3,6 +3,7 @@ defmodule ExplorerSQLTest do
   doctest ExplorerSQL
 
   setup do
+    # TODO: create a helper for pg connection
     opts = [
       database: "explorer_sql_test",
       username: System.get_env("PGUSER") || "postgres",
@@ -18,14 +19,14 @@ defmodule ExplorerSQLTest do
   end
 
   describe "table/2" do
-    test "returns an explorer_sql dataframe if table exists", %{pid: pid} do
-      assert %Explorer.DataFrame{data: %ExplorerSQL.DataFrame{} = df} =
+    test "returns a dataframe if table exists", %{pid: pid} do
+      assert %Explorer.DataFrame{data: %ExplorerSQL.Backend.DataFrame{} = df} =
                ExplorerSQL.table(pid, "links")
 
       assert df.pid == pid
       assert df.table == "links"
       assert df.columns == ["id", "url", "clicks"]
-      assert df.dtypes == [:integer, :string, :integer]
+      assert df.dtypes == ["integer", "text", "integer"]
     end
 
     test "returns an error when table does not exist", %{pid: pid} do
