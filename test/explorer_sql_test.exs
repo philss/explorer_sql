@@ -61,18 +61,29 @@ defmodule ExplorerSQLTest do
 
       assert %Explorer.DataFrame{} = ldf
 
-      assert ldf.data.operations == [{:head, []}]
+      assert ldf.data.operations == [{:head, [5]}]
+    end
+
+    test "adds the head operation with a custom number of rows", %{pid: pid} do
+      ldf = ExplorerSQL.table(pid, "links")
+      assert ldf.data.operations == []
+
+      ldf = ExplorerSQL.head(ldf, 12)
+
+      assert %Explorer.DataFrame{} = ldf
+
+      assert ldf.data.operations == [{:head, [12]}]
     end
 
     test "does not add the head operation if it's already there", %{pid: pid} do
       ldf = ExplorerSQL.table(pid, "links")
       ldf = ExplorerSQL.head(ldf)
 
-      assert ldf.data.operations == [{:head, []}]
+      assert ldf.data.operations == [{:head, [5]}]
 
       ldf = ExplorerSQL.head(ldf)
 
-      assert ldf.data.operations == [{:head, []}]
+      assert ldf.data.operations == [{:head, [5]}]
     end
   end
 end

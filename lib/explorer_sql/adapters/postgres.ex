@@ -29,10 +29,12 @@ defmodule ExplorerSQL.Adapters.Postgres do
   def to_sql(%ExplorerSQL.Backend.DataFrame{} = ldf) do
     ldf.operations
     |> Enum.reverse()
-    |> Enum.reduce(basic_query_plan(ldf), fn {operation, _args}, plan ->
+    |> Enum.reduce(basic_query_plan(ldf), fn {operation, args}, plan ->
       case operation do
         :head ->
-          %{plan | limit: "LIMIT 5"}
+          [limit | _] = args
+
+          %{plan | limit: "LIMIT #{limit}"}
       end
     end)
     |> query_plan_to_sql()

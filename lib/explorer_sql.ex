@@ -27,12 +27,8 @@ defmodule ExplorerSQL do
 
   def to_sql(%DF{data: %SQLDF{} = sql_df}), do: PG.to_sql(sql_df)
 
-  def head(%DF{data: %SQLDF{}} = df) do
-    maybe_add_operation(df, :head)
-  end
-
-  defp maybe_add_operation(%DF{data: %SQLDF{}} = df, operation) when is_atom(operation) do
-    maybe_add_operation(df, {operation, []})
+  def head(%DF{data: %SQLDF{}} = df, n_rows \\ 5) when is_integer(n_rows) do
+    maybe_add_operation(df, {:head, [n_rows]})
   end
 
   defp maybe_add_operation(%DF{data: %SQLDF{} = sql_df} = df, operation) do
