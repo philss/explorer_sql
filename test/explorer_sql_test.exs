@@ -20,13 +20,13 @@ defmodule ExplorerSQLTest do
 
   describe "table/2" do
     test "returns a dataframe if table exists", %{pid: pid} do
-      assert %Explorer.DataFrame{data: %ExplorerSQL.Backend.DataFrame{} = df} =
+      assert %Explorer.DataFrame{data: %ExplorerSQL.Backend.DataFrame{} = sql_df} =
                ExplorerSQL.table(pid, "links")
 
-      assert df.pid == pid
-      assert df.table == "links"
-      assert df.columns == ["id", "url", "clicks"]
-      assert df.dtypes == ["integer", "text", "integer"]
+      assert sql_df.pid == pid
+      assert sql_df.table == "links"
+      assert sql_df.columns == ["id", "url", "clicks"]
+      assert sql_df.dtypes == ["integer", "text", "integer"]
     end
 
     test "returns an error when table does not exist", %{pid: pid} do
@@ -36,10 +36,43 @@ defmodule ExplorerSQLTest do
 
   describe "to_sql/1" do
     test "returns a SQL statement selecting all data", %{pid: pid} do
-      df = ExplorerSQL.table(pid, "links")
-      statement = ExplorerSQL.to_sql(df)
+      ldf = ExplorerSQL.table(pid, "links")
+      statement = ExplorerSQL.to_sql(ldf)
 
-      assert statement == "SELECT * FROM links"
+      assert statement == "SELECT * FROM \"links\""
+    end
+
+    test "with `head` operation returns SQL statement selecting the first five lines", %{pid: pid} do
+      ldf = ExplorerSQL.table(pid, "links")
+      ldf = ExplorerSQL.head(ldf)
+
+      statement = ExplorerSQL.to_sql(ldf)
+
+      assert statement == "SELECT * FROM \"links\" LIMIT 5"
+    end
+  end
+
+  describe "head/1" do
+    test "adds the head operation", %{pid: pid} do
+      ldf = ExplorerSQL.table(pid, "links")
+      assert ldf.data.operations == []
+
+      ldf = ExplorerSQL.head(ldf)
+
+      assert %Explorer.DataFrame{} = ldf
+
+      assert ldf.data.operations == [{:head, []}]
+    end
+
+    test "does not add the head operation if it's already there", %{pid: pid} do
+      ldf = ExplorerSQL.table(pid, "links")
+      ldf = ExplorerSQL.head(ldf)
+
+      assert ldf.data.operations == [{:head, []}]
+
+      ldf = ExplorerSQL.head(ldf)
+
+      assert ldf.data.operations == [{:head, []}]
     end
   end
 end

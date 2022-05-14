@@ -26,8 +26,42 @@ defmodule ExplorerSQL.Adapters.Postgres do
     end
   end
 
-  def to_sql(%ExplorerSQL.Backend.DataFrame{} = df) do
-    # TODO: for security reasons, we need to scape the table name.
-    "SELECT * FROM #{df.table}"
+  def to_sql(%ExplorerSQL.Backend.DataFrame{} = ldf) do
+    ldf.operations
+    |> Enum.reverse()
+    |> Enum.reduce(basic_query_plan(ldf), fn {operation, _args}, plan ->
+      case operation do
+        :head ->
+          %{plan | limit: "LIMIT 5"}
+      end
+    end)
+    |> query_plan_to_sql()
+  end
+
+  defp basic_query_plan(ldf) do
+    %ExplorerSQL.QueryPlan{columns: ldf.columns, from_item: ldf.table}
+  end
+
+  defp query_plan_to_sql(plan) do
+    IO.iodata_to_binary([
+      "SELECT * FROM ",
+      quote_table(plan.from_item),
+      if_do(plan.limit, [?\s, plan.limit])
+    ])
+  end
+
+  # Helpers from EctoSQL's Postgres Adapter.
+  # https://github.com/elixir-ecto/ecto_sql/blob/d53cf7e83020e9893c16437bb93d1e1ee9f68022/lib/ecto/adapters/postgres/connection.ex#L1259
+
+  defp quote_table(name) do
+    if String.contains?(name, "\"") do
+      raise ArgumentError, "bad table name #{inspect(name)}"
+    end
+
+    [?", name, ?"]
+  end
+
+  defp if_do(condition, value) do
+    if condition, do: value, else: []
   end
 end
