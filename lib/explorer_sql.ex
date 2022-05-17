@@ -25,5 +25,19 @@ defmodule ExplorerSQL do
     end
   end
 
-  def to_sql(%DF{data: df}), do: PG.to_sql(df)
+  def to_sql(%DF{data: %SQLDF{} = sql_df}), do: PG.to_sql(sql_df)
+
+  def head(%DF{data: %SQLDF{}} = df, n_rows \\ 5) when is_integer(n_rows) do
+    maybe_add_operation(df, {:head, [n_rows]})
+  end
+
+  defp maybe_add_operation(%DF{data: %SQLDF{} = sql_df} = df, operation) do
+    case {operation, List.first(sql_df.operations)} do
+      {operation, operation} ->
+        df
+
+      {operation, _last_is_other} ->
+        %{df | data: %{sql_df | operations: [operation | sql_df.operations]}}
+    end
+  end
 end
