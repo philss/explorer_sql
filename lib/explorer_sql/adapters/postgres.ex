@@ -1,6 +1,8 @@
 defmodule ExplorerSQL.Adapters.Postgres do
   @moduledoc false
 
+  alias ExplorerSQL.QueryPlan
+
   @spec table_description(pid(), String.t()) ::
           {:ok, {list(String.t()), list(atom())}}
           | {:error, :table_not_found | {:db_error, term()}}
@@ -29,27 +31,41 @@ defmodule ExplorerSQL.Adapters.Postgres do
   def to_sql(%ExplorerSQL.Backend.DataFrame{} = ldf) do
     ldf.operations
     |> Enum.reverse()
-    |> Enum.reduce(basic_query_plan(ldf), fn {operation, args}, plan ->
+    |> Enum.reduce(QueryPlan.new(ldf), fn {operation, args}, plan ->
       case operation do
         :head ->
           [limit | _] = args
 
-          %{plan | limit: "LIMIT #{limit}"}
+          QueryPlan.put_limit(plan, "LIMIT #{limit}")
+
+        :select ->
+          QueryPlan.put_columns(plan, Enum.map_join(hd(args), ", ", &quote_name/1))
       end
     end)
-    |> query_plan_to_sql()
+    |> query_plan_to_sql(0)
   end
 
-  defp basic_query_plan(ldf) do
-    %ExplorerSQL.QueryPlan{columns: ldf.columns, from_item: ldf.table}
-  end
-
-  defp query_plan_to_sql(plan) do
+  # TODO: consider using the `Inspect.Algebra` module for this.
+  defp query_plan_to_sql(plan, level) do
     IO.iodata_to_binary([
-      "SELECT * FROM ",
-      quote_table(plan.from_item),
-      if_do(plan.limit, [?\s, plan.limit])
+      spaces(level),
+      "SELECT ",
+      if(plan.columns, do: plan.columns, else: ?*),
+      " FROM ",
+      if(plan.subquery,
+        do: subquery_to_sql(plan.subquery, level + 1),
+        else: quote_table(plan.from)
+      ),
+      if_do(plan.limit, [?\n, spaces(level), plan.limit])
     ])
+  end
+
+  defp subquery_to_sql(subquery, level) do
+    [?(, ?\n, query_plan_to_sql(subquery, level), ?)]
+  end
+
+  defp spaces(level) do
+    Stream.cycle([?\s]) |> Enum.take(level * 2)
   end
 
   # Helpers from EctoSQL's Postgres Adapter.
@@ -58,6 +74,14 @@ defmodule ExplorerSQL.Adapters.Postgres do
   defp quote_table(name) do
     if String.contains?(name, "\"") do
       raise ArgumentError, "bad table name #{inspect(name)}"
+    end
+
+    [?", name, ?"]
+  end
+
+  defp quote_name(name) do
+    if String.contains?(name, "\"") do
+      raise ArgumentError, "bad field name #{inspect(name)}"
     end
 
     [?", name, ?"]

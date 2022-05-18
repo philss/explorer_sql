@@ -48,7 +48,86 @@ defmodule ExplorerSQLTest do
 
       statement = ExplorerSQL.to_sql(ldf)
 
-      assert statement == "SELECT * FROM \"links\" LIMIT 5"
+      assert statement ==
+               String.trim("""
+               SELECT * FROM "links"
+               LIMIT 5
+               """)
+    end
+
+    test "with `select` operation returns SQL statement selecting two columns", %{pid: pid} do
+      ldf = ExplorerSQL.table(pid, "links")
+      ldf = ExplorerSQL.select(ldf, ["url", "clicks"], :keep)
+
+      statement = ExplorerSQL.to_sql(ldf)
+
+      assert statement ==
+               String.trim("""
+               SELECT "url", "clicks" FROM "links"
+               """)
+    end
+
+    test "combine a `select` operation with a `head` operation", %{pid: pid} do
+      ldf = ExplorerSQL.table(pid, "links")
+      ldf = ExplorerSQL.select(ldf, ["url", "clicks"], :keep)
+      ldf = ExplorerSQL.head(ldf)
+
+      statement = ExplorerSQL.to_sql(ldf)
+
+      assert statement ==
+               String.trim("""
+               SELECT "url", "clicks" FROM "links"
+               LIMIT 5
+               """)
+    end
+
+    test "performs a subquery if `head` comes before `select`", %{pid: pid} do
+      ldf = ExplorerSQL.table(pid, "links")
+      ldf = ExplorerSQL.head(ldf)
+      ldf = ExplorerSQL.select(ldf, ["url", "clicks"], :keep)
+
+      statement = ExplorerSQL.to_sql(ldf)
+
+      assert statement ==
+               String.trim("""
+               SELECT "url", "clicks" FROM (
+                 SELECT * FROM "links"
+                 LIMIT 5)
+               """)
+
+      ldf = ExplorerSQL.head(ldf, 3)
+      statement = ExplorerSQL.to_sql(ldf)
+
+      assert statement ==
+               String.trim("""
+               SELECT "url", "clicks" FROM (
+                 SELECT * FROM "links"
+                 LIMIT 5)
+               LIMIT 3
+               """)
+    end
+
+    test "keep the columns from the last `select` if possible", %{pid: pid} do
+      ldf = ExplorerSQL.table(pid, "links")
+      ldf = ExplorerSQL.select(ldf, ["url", "clicks"], :keep)
+      ldf = ExplorerSQL.select(ldf, ["url"], :keep)
+
+      statement = ExplorerSQL.to_sql(ldf)
+
+      assert statement ==
+               String.trim("""
+               SELECT "url" FROM "links"
+               """)
+
+      ldf = ExplorerSQL.head(ldf, 12)
+
+      statement = ExplorerSQL.to_sql(ldf)
+
+      assert statement ==
+               String.trim("""
+               SELECT "url" FROM "links"
+               LIMIT 12
+               """)
     end
   end
 
@@ -84,6 +163,41 @@ defmodule ExplorerSQLTest do
       ldf = ExplorerSQL.head(ldf)
 
       assert ldf.data.operations == [{:head, [5]}]
+    end
+  end
+
+  describe "select/3" do
+    test "adds a select operation with only two columns", %{pid: pid} do
+      ldf = ExplorerSQL.table(pid, "links")
+      ldf = ExplorerSQL.select(ldf, ["url", "clicks"], :keep)
+
+      assert ldf.data.operations == [{:select, [["url", "clicks"]]}]
+
+      ldf = ExplorerSQL.select(ldf, ["url"], :keep)
+
+      assert ldf.data.operations == [{:select, [["url"]]}, {:select, [["url", "clicks"]]}]
+    end
+
+    test "adds a select operation removing one column", %{pid: pid} do
+      ldf = ExplorerSQL.table(pid, "links")
+      ldf = ExplorerSQL.select(ldf, ["id"], :drop)
+
+      assert ldf.data.operations == [{:select, [["url", "clicks"]]}]
+
+      ldf = ExplorerSQL.select(ldf, ["clicks"], :drop)
+
+      assert ldf.data.operations == [{:select, [["id", "url"]]}, {:select, [["url", "clicks"]]}]
+    end
+
+    test "does not add the same select operation twice in a row", %{pid: pid} do
+      ldf = ExplorerSQL.table(pid, "links")
+      ldf = ExplorerSQL.select(ldf, ["url", "clicks"], :keep)
+
+      assert ldf.data.operations == [{:select, [["url", "clicks"]]}]
+
+      ldf = ExplorerSQL.select(ldf, ["url", "clicks"], :keep)
+
+      assert ldf.data.operations == [{:select, [["url", "clicks"]]}]
     end
   end
 end

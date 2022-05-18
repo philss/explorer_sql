@@ -25,10 +25,28 @@ defmodule ExplorerSQL do
     end
   end
 
+  ## Introspection
+
+  def names(%DF{data: %SQLDF{} = sql_df}), do: sql_df.columns
+
   def to_sql(%DF{data: %SQLDF{} = sql_df}), do: PG.to_sql(sql_df)
+
+  ## Verbs
 
   def head(%DF{data: %SQLDF{}} = df, n_rows \\ 5) when is_integer(n_rows) do
     maybe_add_operation(df, {:head, [n_rows]})
+  end
+
+  def select(%DF{data: %SQLDF{}} = df, columns, keep_or_drop)
+      when is_list(columns) and keep_or_drop in [:keep, :drop] do
+    columns =
+      if keep_or_drop == :keep do
+        columns
+      else
+        names(df) -- columns
+      end
+
+    maybe_add_operation(df, {:select, [columns]})
   end
 
   defp maybe_add_operation(%DF{data: %SQLDF{} = sql_df} = df, operation) do
