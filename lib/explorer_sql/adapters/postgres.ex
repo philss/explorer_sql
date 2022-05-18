@@ -27,29 +27,34 @@ defmodule ExplorerSQL.Adapters.Postgres do
   end
 
   def to_sql(%ExplorerSQL.Backend.DataFrame{} = ldf) do
-    ldf.operations
-    |> Enum.reverse()
-    |> Enum.reduce(basic_query_plan(ldf), fn {operation, args}, plan ->
-      case operation do
-        :head ->
-          [limit | _] = args
-
-          %{plan | limit: "LIMIT #{limit}"}
-      end
-    end)
-    |> query_plan_to_sql()
+    query_plan_to_sql(ldf.query, 0)
   end
 
-  defp basic_query_plan(ldf) do
-    %ExplorerSQL.QueryPlan{columns: ldf.columns, from_item: ldf.table}
-  end
-
-  defp query_plan_to_sql(plan) do
+  # TODO: consider using the `Inspect.Algebra` module for this.
+  defp query_plan_to_sql(plan, level) do
     IO.iodata_to_binary([
-      "SELECT * FROM ",
-      quote_table(plan.from_item),
-      if_do(plan.limit, [?\s, plan.limit])
+      spaces(level),
+      "SELECT ",
+      if(plan.columns, do: quote_columns(plan.columns), else: ?*),
+      " FROM ",
+      if(match?(%ExplorerSQL.Query{}, plan.from),
+        do: subquery_to_sql(plan.from, level + 1),
+        else: quote_table(plan.from)
+      ),
+      if_do(plan.limit, [?\n, spaces(level), "LIMIT ", plan.limit])
     ])
+  end
+
+  defp subquery_to_sql(subquery, level) do
+    [?(, ?\n, query_plan_to_sql(subquery, level), ?)]
+  end
+
+  defp spaces(level) do
+    Stream.cycle([?\s]) |> Enum.take(level * 2)
+  end
+
+  defp quote_columns(columns) do
+    Enum.map_join(columns, ", ", &quote_name/1)
   end
 
   # Helpers from EctoSQL's Postgres Adapter.
@@ -58,6 +63,14 @@ defmodule ExplorerSQL.Adapters.Postgres do
   defp quote_table(name) do
     if String.contains?(name, "\"") do
       raise ArgumentError, "bad table name #{inspect(name)}"
+    end
+
+    [?", name, ?"]
+  end
+
+  defp quote_name(name) do
+    if String.contains?(name, "\"") do
+      raise ArgumentError, "bad field name #{inspect(name)}"
     end
 
     [?", name, ?"]
