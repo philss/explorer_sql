@@ -134,70 +134,44 @@ defmodule ExplorerSQLTest do
   describe "head/1" do
     test "adds the head operation", %{pid: pid} do
       ldf = ExplorerSQL.table(pid, "links")
-      assert ldf.data.operations == []
-
       ldf = ExplorerSQL.head(ldf)
 
       assert %Explorer.DataFrame{} = ldf
 
-      assert ldf.data.operations == [{:head, [5]}]
+      assert ldf.data.query.limit == "5"
     end
 
     test "adds the head operation with a custom number of rows", %{pid: pid} do
       ldf = ExplorerSQL.table(pid, "links")
-      assert ldf.data.operations == []
-
       ldf = ExplorerSQL.head(ldf, 12)
 
       assert %Explorer.DataFrame{} = ldf
 
-      assert ldf.data.operations == [{:head, [12]}]
-    end
-
-    test "does not add the head operation if it's already there", %{pid: pid} do
-      ldf = ExplorerSQL.table(pid, "links")
-      ldf = ExplorerSQL.head(ldf)
-
-      assert ldf.data.operations == [{:head, [5]}]
-
-      ldf = ExplorerSQL.head(ldf)
-
-      assert ldf.data.operations == [{:head, [5]}]
+      assert ldf.data.query.limit == "12"
     end
   end
 
   describe "select/3" do
-    test "adds a select operation with only two columns", %{pid: pid} do
+    test "adds a select to query with given columns", %{pid: pid} do
       ldf = ExplorerSQL.table(pid, "links")
       ldf = ExplorerSQL.select(ldf, ["url", "clicks"], :keep)
 
-      assert ldf.data.operations == [{:select, [["url", "clicks"]]}]
+      assert ldf.data.query.columns == ["url", "clicks"]
 
       ldf = ExplorerSQL.select(ldf, ["url"], :keep)
 
-      assert ldf.data.operations == [{:select, [["url"]]}, {:select, [["url", "clicks"]]}]
+      assert ldf.data.query.columns == ["url"]
     end
 
     test "adds a select operation removing one column", %{pid: pid} do
       ldf = ExplorerSQL.table(pid, "links")
       ldf = ExplorerSQL.select(ldf, ["id"], :drop)
 
-      assert ldf.data.operations == [{:select, [["url", "clicks"]]}]
+      assert ldf.data.query.columns == ["url", "clicks"]
 
       ldf = ExplorerSQL.select(ldf, ["clicks"], :drop)
 
-      assert ldf.data.operations == [{:select, [["id", "url"]]}, {:select, [["url", "clicks"]]}]
-    end
-
-    test "does not add the same select operation twice in a row", %{pid: pid} do
-      ldf = ExplorerSQL.table(pid, "links")
-      ldf = ExplorerSQL.select(ldf, ["url", "clicks"], :keep)
-
-      assert ldf.data.operations == [{:select, [["url", "clicks"]]}]
-
-      ldf = ExplorerSQL.select(ldf, ["url", "clicks"], :keep)
-
-      assert ldf.data.operations == [{:select, [["url", "clicks"]]}]
+      assert ldf.data.query.columns == ["id", "url"]
     end
   end
 end

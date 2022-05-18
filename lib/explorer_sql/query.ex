@@ -1,4 +1,4 @@
-defmodule ExplorerSQL.QueryPlan do
+defmodule ExplorerSQL.Query do
   @moduledoc false
   # Holds all data to construct a SELECT query by the adapters.
 
@@ -7,7 +7,6 @@ defmodule ExplorerSQL.QueryPlan do
   # If some operation is "replaced" by other, then the first one is "pushed" to a subquery
   defstruct columns: nil,
             from: nil,
-            subquery: nil,
             condition: nil,
             group_by: nil,
             having: nil,
@@ -16,19 +15,23 @@ defmodule ExplorerSQL.QueryPlan do
             limit: nil,
             offset: nil
 
+  def new(table) when is_binary(table) do
+    %__MODULE__{from: table}
+  end
+
   def new(lazy_frame) do
     %__MODULE__{from: lazy_frame.table}
   end
 
-  def put_limit(%__MODULE__{} = plan, limit_string) do
-    %{plan | limit: limit_string}
+  def put_limit(%__MODULE__{} = plan, limit) when is_integer(limit) do
+    %{plan | limit: to_string(limit)}
   end
 
-  def put_columns(%__MODULE__{} = plan, columns_iodata) do
+  def put_columns(%__MODULE__{} = plan, columns) when is_list(columns) do
     if is_nil(plan.limit) do
-      %{plan | columns: columns_iodata}
+      %{plan | columns: columns}
     else
-      %__MODULE__{subquery: plan, columns: columns_iodata}
+      %__MODULE__{from: plan, columns: columns}
     end
   end
 end

@@ -1,8 +1,6 @@
 defmodule ExplorerSQL.Adapters.Postgres do
   @moduledoc false
 
-  alias ExplorerSQL.QueryPlan
-
   @spec table_description(pid(), String.t()) ::
           {:ok, {list(String.t()), list(atom())}}
           | {:error, :table_not_found | {:db_error, term()}}
@@ -29,20 +27,7 @@ defmodule ExplorerSQL.Adapters.Postgres do
   end
 
   def to_sql(%ExplorerSQL.Backend.DataFrame{} = ldf) do
-    ldf.operations
-    |> Enum.reverse()
-    |> Enum.reduce(QueryPlan.new(ldf), fn {operation, args}, plan ->
-      case operation do
-        :head ->
-          [limit | _] = args
-
-          QueryPlan.put_limit(plan, "LIMIT #{limit}")
-
-        :select ->
-          QueryPlan.put_columns(plan, Enum.map_join(hd(args), ", ", &quote_name/1))
-      end
-    end)
-    |> query_plan_to_sql(0)
+    query_plan_to_sql(ldf.query, 0)
   end
 
   # TODO: consider using the `Inspect.Algebra` module for this.
@@ -50,13 +35,13 @@ defmodule ExplorerSQL.Adapters.Postgres do
     IO.iodata_to_binary([
       spaces(level),
       "SELECT ",
-      if(plan.columns, do: plan.columns, else: ?*),
+      if(plan.columns, do: quote_columns(plan.columns), else: ?*),
       " FROM ",
-      if(plan.subquery,
-        do: subquery_to_sql(plan.subquery, level + 1),
+      if(match?(%ExplorerSQL.Query{}, plan.from),
+        do: subquery_to_sql(plan.from, level + 1),
         else: quote_table(plan.from)
       ),
-      if_do(plan.limit, [?\n, spaces(level), plan.limit])
+      if_do(plan.limit, [?\n, spaces(level), "LIMIT ", plan.limit])
     ])
   end
 
@@ -66,6 +51,10 @@ defmodule ExplorerSQL.Adapters.Postgres do
 
   defp spaces(level) do
     Stream.cycle([?\s]) |> Enum.take(level * 2)
+  end
+
+  defp quote_columns(columns) do
+    Enum.map_join(columns, ", ", &quote_name/1)
   end
 
   # Helpers from EctoSQL's Postgres Adapter.
