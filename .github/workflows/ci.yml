@@ -62,9 +62,18 @@ jobs:
           path: |
             deps
             _build
+            native/explorer/target
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
           key: ${{ runner.os }}-mix-${{matrix.pair.elixir}}-${{matrix.pair.otp}}-${{ hashFiles('**/mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-mix-
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
 
       - run: mix deps.get
 
