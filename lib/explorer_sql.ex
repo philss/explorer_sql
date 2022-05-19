@@ -32,6 +32,8 @@ defmodule ExplorerSQL do
     end
   end
 
+  def collect(%DF{data: %SQLDF{} = sql_df}), do: PG.collect(sql_df)
+
   ## Introspection
 
   def names(%DF{data: %SQLDF{} = sql_df}), do: sql_df.columns

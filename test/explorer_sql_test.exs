@@ -2,6 +2,8 @@ defmodule ExplorerSQLTest do
   use ExUnit.Case, async: true
   doctest ExplorerSQL
 
+  alias Explorer.DataFrame, as: DF
+
   setup do
     # TODO: create a helper for pg connection
     opts = [
@@ -92,7 +94,7 @@ defmodule ExplorerSQLTest do
                String.trim("""
                SELECT "url", "clicks" FROM (
                  SELECT * FROM "links"
-                 LIMIT 5)
+                 LIMIT 5) AS subquery_1
                """)
 
       ldf = ExplorerSQL.head(ldf, 3)
@@ -102,7 +104,7 @@ defmodule ExplorerSQLTest do
                String.trim("""
                SELECT "url", "clicks" FROM (
                  SELECT * FROM "links"
-                 LIMIT 5)
+                 LIMIT 5) AS subquery_1
                LIMIT 3
                """)
     end
@@ -128,6 +130,75 @@ defmodule ExplorerSQLTest do
                SELECT "url" FROM "links"
                LIMIT 12
                """)
+    end
+  end
+
+  describe "collect/1" do
+    test "without a query returns a new DF with all data from table", %{pid: pid} do
+      ldf = ExplorerSQL.table(pid, "links")
+      {:ok, df} = ExplorerSQL.collect(ldf)
+
+      assert DF.names(df) == ["id", "url", "clicks"]
+
+      assert %{
+               "id" => [1, 2, 3],
+               "clicks" => [42000, 51345, 63107],
+               "url" => [
+                 "https://elixir-lang.org",
+                 "https://github.com/elixir-nx",
+                 "https://github.com/elixir-nx/explorer"
+               ]
+             } = Explorer.DataFrame.to_columns(df)
+    end
+
+    test "select returns a new DF with some columns from table", %{pid: pid} do
+      ldf = ExplorerSQL.table(pid, "links")
+      ldf = ExplorerSQL.select(ldf, ["url", "clicks"], :keep)
+      {:ok, df} = ExplorerSQL.collect(ldf)
+
+      assert DF.names(df) == ["url", "clicks"]
+
+      assert %{
+               "clicks" => [42000, 51345, 63107],
+               "url" => [
+                 "https://elixir-lang.org",
+                 "https://github.com/elixir-nx",
+                 "https://github.com/elixir-nx/explorer"
+               ]
+             } = Explorer.DataFrame.to_columns(df)
+    end
+
+    test "head limits the results of the query", %{pid: pid} do
+      ldf = ExplorerSQL.table(pid, "links")
+      ldf = ExplorerSQL.head(ldf, 1)
+
+      {:ok, df} = ExplorerSQL.collect(ldf)
+
+      assert %{
+               "clicks" => [42000],
+               "id" => [1],
+               "url" => [
+                 "https://elixir-lang.org"
+               ]
+             } = Explorer.DataFrame.to_columns(df)
+    end
+
+    test "head before a select also limits the results of the query", %{pid: pid} do
+      ldf = ExplorerSQL.table(pid, "links")
+      ldf = ExplorerSQL.head(ldf, 1)
+      # Changing order of columns also affects the final DF
+      ldf = ExplorerSQL.select(ldf, ["clicks", "url"], :keep)
+
+      {:ok, df} = ExplorerSQL.collect(ldf)
+
+      assert DF.names(df) == ["clicks", "url"]
+
+      assert %{
+               "clicks" => [42000],
+               "url" => [
+                 "https://elixir-lang.org"
+               ]
+             } = Explorer.DataFrame.to_columns(df)
     end
   end
 
