@@ -26,6 +26,16 @@ defmodule ExplorerSQL.Adapters.Postgres do
     end
   end
 
+  def collect(%ExplorerSQL.Backend.DataFrame{} = ldf) do
+    ldf
+    |> to_sql()
+    |> then(fn sql_statement ->
+      with {:ok, result} <- Postgrex.query(ldf.pid, sql_statement, [], []) do
+        {:ok, Explorer.DataFrame.new(result)}
+      end
+    end)
+  end
+
   def to_sql(%ExplorerSQL.Backend.DataFrame{} = ldf) do
     query_plan_to_sql(ldf.query, 0)
   end
@@ -46,7 +56,7 @@ defmodule ExplorerSQL.Adapters.Postgres do
   end
 
   defp subquery_to_sql(subquery, level) do
-    [?(, ?\n, query_plan_to_sql(subquery, level), ?)]
+    [?(, ?\n, query_plan_to_sql(subquery, level), ?), " AS subquery_#{level}"]
   end
 
   defp spaces(level) do

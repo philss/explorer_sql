@@ -19,7 +19,9 @@ defmodule ExplorerSQL.MixProject do
 
   defp deps do
     [
-      {:explorer, ">= 0.0.0"},
+      {:explorer, git: "https://github.com/elixir-nx/explorer.git"},
+      # TODO: remove rustler after explorer 0.2 is released
+      {:rustler, ">= 0.0.0"},
       {:postgrex, ">= 0.0.0"}
     ]
   end

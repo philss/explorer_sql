@@ -64,4 +64,11 @@ PSQL.cmd([
   "CREATE TABLE links (id serial, url text, clicks int);"
 ])
 
+PSQL.cmd([
+  "-d",
+  "explorer_sql_test",
+  "-c",
+  "INSERT INTO links (url, clicks) VALUES ('https://elixir-lang.org', 42000), ('https://github.com/elixir-nx', 51345), ('https://github.com/elixir-nx/explorer', 63107);"
+])
+
 ExUnit.start(assert_receive_timeout: 1_000)
